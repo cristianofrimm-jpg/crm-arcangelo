@@ -1,0 +1,1536 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Schedario Arcangelo</title>
+<style>
+  :root{
+    --ink:#1f2a30;
+    --ink-soft:#3c4a52;
+    --paper:#f4f1e8;
+    --paper-2:#ffffff;
+    --line:#d8d2c2;
+    --brass:#b8863c;
+    --brass-dark:#8a6228;
+    --brass-light:#f0e3c8;
+    --green:#3b6d11;
+    --green-light:#eaf3de;
+    --red:#a32d2d;
+    --red-light:#fcebeb;
+    --slate:#5f5e5a;
+    --radius:10px;
+    --shadow:0 1px 2px rgba(31,42,48,.08);
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    font-family:'Inter',-apple-system,system-ui,sans-serif;
+    background:var(--paper);
+    color:var(--ink);
+    -webkit-font-smoothing:antialiased;
+  }
+  .app{max-width:1180px;margin:0 auto;padding:20px 24px 60px;}
+
+  .masthead{
+    display:flex;justify-content:space-between;align-items:flex-end;
+    border-bottom:3px double var(--ink);
+    padding-bottom:14px;margin-bottom:20px;
+    flex-wrap:wrap;gap:10px;
+  }
+  .masthead-left{display:flex;align-items:baseline;gap:14px;}
+  .masthead h1{
+    font-family:Georgia,'Times New Roman',serif;
+    font-size:30px;font-weight:700;margin:0;letter-spacing:.5px;
+  }
+  .masthead .sub{font-size:12px;color:var(--slate);letter-spacing:2px;text-transform:uppercase;}
+  .masthead-right{text-align:right;font-size:12px;color:var(--slate);}
+  .masthead-right .date{font-weight:600;color:var(--ink);}
+
+  nav.tabs{
+    display:flex;gap:4px;margin-bottom:22px;border-bottom:1px solid var(--line);
+    overflow-x:auto;
+  }
+  nav.tabs button{
+    font-family:inherit;font-size:13px;font-weight:600;letter-spacing:.5px;
+    text-transform:uppercase;padding:10px 18px;border:none;background:none;
+    color:var(--slate);cursor:pointer;border-bottom:3px solid transparent;
+    white-space:nowrap;transition:.15s;
+  }
+  nav.tabs button:hover{color:var(--ink);}
+  nav.tabs button.active{color:var(--ink);border-bottom-color:var(--brass);}
+
+  nav.subtabs{display:flex;gap:6px;margin-bottom:16px;flex-wrap:wrap;}
+  nav.subtabs button{
+    font-family:inherit;font-size:12px;font-weight:600;letter-spacing:.5px;
+    padding:7px 16px;border:1px solid var(--line);border-radius:20px;background:var(--paper-2);
+    color:var(--slate);cursor:pointer;transition:.15s;
+  }
+  nav.subtabs button:hover{border-color:var(--brass);color:var(--ink);}
+  nav.subtabs button.active{background:var(--ink);color:var(--paper-2);border-color:var(--ink);}
+  .subview{display:none;}
+  .subview.active{display:block;animation:fade .25s ease;}
+
+  .view{display:none;}
+  .view.active{display:block;animation:fade .25s ease;}
+  @keyframes fade{from{opacity:0;transform:translateY(4px);}to{opacity:1;transform:translateY(0);}}
+
+  /* ===== KPI cards ===== */
+  .kpi-grid{
+    display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));
+    gap:12px;margin-bottom:24px;
+  }
+  .kpi{
+    background:var(--paper-2);border:1px solid var(--line);border-radius:var(--radius);
+    padding:14px 16px;box-shadow:var(--shadow);position:relative;overflow:hidden;
+  }
+  .kpi .label{font-size:11px;text-transform:uppercase;letter-spacing:1.5px;color:var(--slate);margin:0 0 6px;}
+  .kpi .value{
+    font-family:Georgia,serif;font-size:28px;font-weight:700;color:var(--ink);
+    font-variant-numeric:tabular-nums;
+  }
+  .kpi .delta{font-size:12px;margin-top:4px;color:var(--slate);}
+  .kpi .delta.pos{color:var(--green);}
+  .kpi .delta.neg{color:var(--red);}
+  .kpi.accent{border-color:var(--brass);}
+  .kpi.accent::before{
+    content:'';position:absolute;top:0;left:0;width:4px;height:100%;background:var(--brass);
+  }
+
+  /* ===== generic card / section ===== */
+  .card{
+    background:var(--paper-2);border:1px solid var(--line);border-radius:var(--radius);
+    padding:18px 20px;margin-bottom:18px;box-shadow:var(--shadow);
+  }
+  .card h2{
+    font-family:Georgia,serif;font-size:18px;margin:0 0 14px;
+    border-bottom:1px solid var(--line);padding-bottom:8px;
+    display:flex;justify-content:space-between;align-items:center;
+  }
+  .card h2 .tag{
+    font-size:11px;font-weight:600;letter-spacing:1px;text-transform:uppercase;
+    color:var(--brass-dark);background:var(--brass-light);padding:3px 10px;border-radius:20px;
+  }
+
+  /* progress bar */
+  .progress-row{margin-bottom:14px;}
+  .progress-row .pr-head{display:flex;justify-content:space-between;font-size:13px;margin-bottom:5px;}
+  .progress-row .pr-head .name{font-weight:600;}
+  .progress-track{height:8px;background:var(--paper);border:1px solid var(--line);border-radius:5px;overflow:hidden;}
+  .progress-fill{height:100%;background:var(--brass);border-radius:5px 0 0 5px;transition:width .4s ease;}
+  .progress-fill.low{background:var(--red);}
+  .progress-fill.mid{background:var(--brass);}
+  .progress-fill.high{background:var(--green);}
+
+  /* two-col layout */
+  .grid-2{display:grid;grid-template-columns:1.3fr 1fr;gap:18px;}
+  @media (max-width:860px){.grid-2{grid-template-columns:1fr;}}
+
+  /* ===== table ===== */
+  table.list{width:100%;border-collapse:collapse;font-size:13px;}
+  table.list th{
+    text-align:left;font-size:11px;text-transform:uppercase;letter-spacing:1px;
+    color:var(--slate);font-weight:600;padding:6px 8px;border-bottom:2px solid var(--ink);
+  }
+  table.list td{padding:8px 8px;border-bottom:1px solid var(--line);vertical-align:middle;}
+  table.list tr:hover td{background:var(--paper);}
+  table.list td.num{text-align:right;font-variant-numeric:tabular-nums;}
+  table.list td a{color:var(--brass-dark);text-decoration:none;font-weight:600;}
+  table.list td a:hover{text-decoration:underline;}
+
+  .badge{
+    display:inline-block;font-size:11px;font-weight:600;padding:2px 9px;border-radius:20px;
+    letter-spacing:.3px;
+  }
+  .badge.lead{background:#e6f1fb;color:#0c447c;}
+  .badge.referenza{background:var(--brass-light);color:var(--brass-dark);}
+  .badge.incarico{background:var(--green-light);color:var(--green);}
+  .badge.collab{background:#eeedfe;color:#3c3489;}
+  .badge.vendita{background:#fbeaf0;color:#72243e;}
+  .badge.privato{background:#f1efe8;color:#444441;}
+
+  .badge.win{background:var(--green-light);color:var(--green);}
+  .badge.todo{background:var(--paper);color:var(--slate);border:1px solid var(--line);}
+
+  .check{
+    width:18px;height:18px;cursor:pointer;accent-color:var(--green);
+  }
+
+  /* ===== forms ===== */
+  .form-row{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:10px;}
+  .form-row input,.form-row select{
+    font-family:inherit;font-size:13px;padding:8px 10px;border:1px solid var(--line);
+    border-radius:6px;background:var(--paper-2);color:var(--ink);flex:1;min-width:120px;
+  }
+  .form-row input:focus,.form-row select:focus{outline:2px solid var(--brass-light);border-color:var(--brass);}
+  .btn{
+    font-family:inherit;font-size:13px;font-weight:600;padding:8px 18px;border-radius:6px;
+    border:1px solid var(--ink);background:var(--ink);color:var(--paper-2);cursor:pointer;
+    letter-spacing:.5px;transition:.15s;
+  }
+  .btn:hover{background:var(--ink-soft);}
+  .btn.secondary{background:none;color:var(--ink);border-color:var(--line);}
+  .btn.secondary:hover{background:var(--paper);}
+  .btn.danger{background:none;color:var(--red);border-color:var(--red);}
+  .btn.danger:hover{background:var(--red-light);}
+  .btn-sm{padding:4px 10px;font-size:11px;}
+
+  /* team table */
+  .rank{
+    font-family:Georgia,serif;font-weight:700;width:28px;text-align:center;
+    color:var(--slate);
+  }
+  tr.me td{background:var(--brass-light)!important;}
+  tr.me .rank{color:var(--brass-dark);}
+
+  /* empty state */
+  .empty{
+    text-align:center;padding:30px 10px;color:var(--slate);font-size:13px;
+  }
+  .empty i{font-size:28px;display:block;margin-bottom:8px;color:var(--line);}
+
+  .pipeline-cols{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;}
+  @media (max-width:860px){.pipeline-cols{grid-template-columns:repeat(2,1fr);}}
+  .pipeline-col{background:var(--paper);border:1px solid var(--line);border-radius:8px;padding:10px;}
+  .pipeline-col h3{
+    font-size:11px;text-transform:uppercase;letter-spacing:1px;margin:0 0 10px;
+    color:var(--slate);display:flex;justify-content:space-between;
+  }
+  .pipeline-card{
+    background:var(--paper-2);border:1px solid var(--line);border-radius:6px;
+    padding:8px 10px;margin-bottom:8px;font-size:12px;
+  }
+  .pipeline-card .pc-title{font-weight:600;margin-bottom:3px;}
+  .pipeline-card .pc-meta{color:var(--slate);font-size:11px;}
+
+  .toolbar{display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;flex-wrap:wrap;gap:10px;}
+
+  .loading-banner{
+    font-size:12px;color:var(--slate);text-align:center;padding:6px;
+  }
+  .small-note{font-size:12px;color:var(--slate);margin-top:6px;}
+
+  ::-webkit-scrollbar{height:6px;width:6px;}
+  ::-webkit-scrollbar-thumb{background:var(--line);border-radius:3px;}
+</style>
+</head>
+<body>
+<div class="app">
+
+  <header class="masthead">
+    <div class="masthead-left">
+      <h1>Lo Schedario</h1>
+      <span class="sub">Agente &mdash; Arcangelo</span>
+    </div>
+    <div class="masthead-right">
+      <div class="date" id="today-date"></div>
+      <div id="save-status">tutto salvato</div>
+      <button class="btn secondary btn-sm" id="reset-data-btn" style="margin-top:6px;">Ripristina dati iniziali</button>
+    </div>
+  </header>
+
+  <nav class="tabs">
+    <button data-view="dashboard" class="active">Cruscotto</button>
+    <button data-view="notizie">Notizie</button>
+    <button data-view="pipeline">Pipeline incarichi</button>
+    <button data-view="lead">Contatti</button>
+    <button data-view="immobili">Immobili Frimm</button>
+    <button data-view="team">Classifica team</button>
+  </nav>
+
+  <!-- ===================== DASHBOARD ===================== -->
+  <section class="view active" id="view-dashboard">
+    <div class="kpi-grid" id="kpi-grid"></div>
+
+    <div class="grid-2">
+      <div class="card">
+        <h2>Obiettivo annuo <span class="tag" id="obj-pct-tag">0%</span></h2>
+        <div class="progress-row">
+          <div class="pr-head">
+            <span class="name">Produzione personale</span>
+            <span id="obj-numbers"></span>
+          </div>
+          <div class="progress-track"><div class="progress-fill" id="obj-fill" style="width:0%"></div></div>
+        </div>
+        <div class="small-note">Obiettivo: &euro; 160.000 &mdash; aggiornabile nelle impostazioni rapide.</div>
+        <div class="form-row" style="margin-top:12px;">
+          <input type="number" id="obj-input" placeholder="Nuovo obiettivo annuo (&euro;)">
+          <button class="btn secondary" id="obj-save">Aggiorna obiettivo</button>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2>Imbuto di conversione</h2>
+        <div id="funnel"></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Azioni prioritarie di oggi <span class="tag" id="actions-tag">0</span></h2>
+      <div id="action-list"></div>
+    </div>
+
+    <div class="card">
+      <h2>Andamento incassi 2026</h2>
+      <div style="position:relative;width:100%;height:260px;">
+        <canvas id="incomeChart" role="img" aria-label="Grafico a barre dell'incasso mensile del team confrontato con l'obiettivo mensile, da gennaio a giugno 2026">Incasso mensile team gennaio-giugno 2026 confrontato con obiettivo.</canvas>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===================== NOTIZIE ===================== -->
+  <section class="view" id="view-notizie">
+    <div class="toolbar">
+      <div style="font-size:13px;color:var(--slate);">Le tue notizie. Spunta appuntamento fissato e incarico ottenuto per aggiornare le statistiche di conversione.</div>
+      <button class="btn" id="add-notizia-btn"><i class="ti ti-plus" aria-hidden="true"></i> Nuova notizia</button>
+    </div>
+
+    <div class="card" id="new-notizia-card" style="display:none;">
+      <h2>Nuova notizia</h2>
+      <div class="form-row">
+        <input type="text" id="n-titolo" placeholder="Indirizzo / titolo">
+        <select id="n-fonte">
+          <option value="REFERENZA">Referenza</option>
+          <option value="LEAD">Lead</option>
+          <option value="DA INCARICO">Da incarico</option>
+          <option value="COLLABORAZIONE">Collaborazione</option>
+          <option value="PRIVATO">Privato</option>
+          <option value="DA VENDITA">Da vendita</option>
+        </select>
+        <input type="text" id="n-segnalatore" placeholder="Fonte / segnalatore">
+      </div>
+      <div class="form-row">
+        <button class="btn" id="n-save">Salva notizia</button>
+        <button class="btn secondary" id="n-cancel">Annulla</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <table class="list">
+        <thead>
+          <tr>
+            <th>Notizia</th>
+            <th>Fonte</th>
+            <th style="text-align:center;">Appunt.</th>
+            <th style="text-align:center;">Incarico</th>
+            <th style="text-align:center;">Venduto</th>
+            <th class="num">Provv. (&euro;)</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody id="notizie-body"></tbody>
+      </table>
+      <div class="empty" id="notizie-empty" style="display:none;">
+        <i class="ti ti-news" aria-hidden="true"></i>
+        Nessuna notizia ancora. Aggiungi la prima per iniziare a tracciare le conversioni.
+      </div>
+    </div>
+  </section>
+
+  <!-- ===================== PIPELINE ===================== -->
+  <section class="view" id="view-pipeline">
+    <div class="toolbar">
+      <div style="font-size:13px;color:var(--slate);">Incarichi raggruppati per stato. Sposta lo stato dal menu sulla scheda.</div>
+      <button class="btn" id="add-incarico-btn"><i class="ti ti-plus" aria-hidden="true"></i> Nuovo incarico</button>
+    </div>
+
+    <div class="card" id="new-incarico-card" style="display:none;">
+      <h2>Nuovo incarico</h2>
+      <div class="form-row">
+        <input type="text" id="i-titolo" placeholder="Indirizzo immobile">
+        <input type="text" id="i-valore" placeholder="Valore immobile (&euro;)">
+        <input type="text" id="i-provv" placeholder="Provvigione attesa (&euro;)">
+      </div>
+      <div class="form-row">
+        <select id="i-stato">
+          <option value="da_incarico">Da incarico</option>
+          <option value="attivo">Attivo</option>
+          <option value="venduto">Venduto</option>
+          <option value="incassato">Incassato</option>
+        </select>
+        <input type="text" id="i-cliente" placeholder="Cliente / fonte">
+        <button class="btn" id="i-save">Salva incarico</button>
+        <button class="btn secondary" id="i-cancel">Annulla</button>
+      </div>
+    </div>
+
+    <div class="pipeline-cols" id="pipeline-cols"></div>
+  </section>
+
+  <!-- ===================== LEAD ===================== -->
+  <section class="view" id="view-lead">
+
+    <nav class="subtabs">
+      <button data-sub="venditori" class="active">Vogliono vendere</button>
+      <button data-sub="segnalatori">Segnalatori</button>
+      <button data-sub="acquirenti">Vogliono comprare</button>
+    </nav>
+
+    <!-- ---- VENDITORI ---- -->
+    <div class="subview active" id="sub-venditori">
+      <div class="toolbar">
+        <div style="font-size:13px;color:var(--slate);">Proprietari di immobili da vendere. Collega il link dell'annuncio Frimm una volta pubblicato.</div>
+        <button class="btn" id="add-venditore-btn"><i class="ti ti-plus" aria-hidden="true"></i> Nuovo proprietario</button>
+      </div>
+
+      <div class="card" id="new-venditore-card" style="display:none;">
+        <h2>Nuovo proprietario / venditore</h2>
+        <div class="form-row">
+          <input type="text" id="v-nome" placeholder="Nome">
+          <input type="text" id="v-immobile" placeholder="Indirizzo immobile da vendere">
+          <select id="v-tipo">
+            <option value="appartamento">Appartamento</option>
+            <option value="bilocale">Bilocale</option>
+            <option value="trilocale">Trilocale</option>
+            <option value="quadrilocale">Quadrilocale</option>
+            <option value="villa">Villa</option>
+            <option value="ufficio">Ufficio</option>
+            <option value="negozio">Negozio</option>
+            <option value="altro">Altro</option>
+          </select>
+        </div>
+        <div class="form-row">
+          <input type="text" id="v-prezzo" placeholder="Prezzo richiesto (&euro;)">
+          <input type="text" id="v-fonte" placeholder="Fonte contatto">
+          <input type="url" id="v-link" placeholder="Link annuncio Frimm (https://frimmacademymilano.it/...)">
+        </div>
+        <div class="form-row">
+          <button class="btn" id="v-save">Salva proprietario</button>
+          <button class="btn secondary" id="v-cancel">Annulla</button>
+        </div>
+      </div>
+
+      <div class="card">
+        <table class="list">
+          <thead>
+            <tr>
+              <th>Proprietario</th>
+              <th>Immobile</th>
+              <th>Tipologia</th>
+              <th class="num">Prezzo</th>
+              <th>Fonte</th>
+              <th>Annuncio Frimm</th>
+              <th style="text-align:center;">Richiamato</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody id="venditori-body"></tbody>
+        </table>
+        <div class="empty" id="venditori-empty" style="display:none;">
+          <i class="ti ti-home-dollar" aria-hidden="true"></i>
+          Nessun proprietario in archivio. Aggiungine uno per iniziare.
+        </div>
+      </div>
+    </div>
+
+    <!-- ---- SEGNALATORI ---- -->
+    <div class="subview" id="sub-segnalatori">
+      <div class="toolbar">
+        <div style="font-size:13px;color:var(--slate);">Persone che ti segnalano contatti o immobili.</div>
+        <button class="btn" id="add-segnalatore-btn"><i class="ti ti-plus" aria-hidden="true"></i> Nuovo segnalatore</button>
+      </div>
+
+      <div class="card" id="new-segnalatore-card" style="display:none;">
+        <h2>Nuovo segnalatore</h2>
+        <div class="form-row">
+          <input type="text" id="s-nome" placeholder="Nome segnalatore">
+          <input type="text" id="s-relazione" placeholder="Relazione (es. portiere, ex cliente, amico)">
+          <input type="text" id="s-contatto" placeholder="Telefono / email">
+        </div>
+        <div class="form-row">
+          <input type="text" id="s-note" placeholder="Note (cosa ha segnalato, quando)">
+          <button class="btn" id="s-save">Salva segnalatore</button>
+          <button class="btn secondary" id="s-cancel">Annulla</button>
+        </div>
+      </div>
+
+      <div class="card">
+        <table class="list">
+          <thead>
+            <tr>
+              <th>Nome</th>
+              <th>Relazione</th>
+              <th>Contatto</th>
+              <th>Note / segnalazioni</th>
+              <th style="text-align:center;">Richiamato</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody id="segnalatori-body"></tbody>
+        </table>
+        <div class="empty" id="segnalatori-empty" style="display:none;">
+          <i class="ti ti-speakerphone" aria-hidden="true"></i>
+          Nessun segnalatore in archivio. Aggiungine uno per iniziare.
+        </div>
+      </div>
+    </div>
+
+    <!-- ---- ACQUIRENTI ---- -->
+    <div class="subview" id="sub-acquirenti">
+      <div class="toolbar">
+        <div style="font-size:13px;color:var(--slate);">Persone in ricerca attiva: criteri di ricerca e annunci inviati.</div>
+        <button class="btn" id="add-acquirente-btn"><i class="ti ti-plus" aria-hidden="true"></i> Nuovo acquirente</button>
+      </div>
+
+      <div class="card" id="new-acquirente-card" style="display:none;">
+        <h2>Nuovo acquirente</h2>
+        <div class="form-row">
+          <input type="text" id="a-nome" placeholder="Nome">
+          <input type="text" id="a-budget" placeholder="Budget (&euro;)">
+          <select id="a-tipo">
+            <option value="bilocale">Bilocale</option>
+            <option value="trilocale">Trilocale</option>
+            <option value="quadrilocale">Quadrilocale</option>
+            <option value="villa">Villa</option>
+            <option value="ufficio">Ufficio</option>
+            <option value="negozio">Negozio</option>
+            <option value="altro">Altro</option>
+          </select>
+        </div>
+        <div class="form-row">
+          <input type="text" id="a-zona" placeholder="Zona di interesse">
+          <select id="a-vende">
+            <option value="no">Non deve vendere</option>
+            <option value="si">Deve vendere casa propria</option>
+          </select>
+          <select id="a-mutuo">
+            <option value="no">Non serve mutuo</option>
+            <option value="si">Necessita mutuo</option>
+          </select>
+        </div>
+        <div class="form-row">
+          <input type="text" id="a-fonte" placeholder="Fonte contatto">
+          <button class="btn" id="a-save">Salva acquirente</button>
+          <button class="btn secondary" id="a-cancel">Annulla</button>
+        </div>
+      </div>
+
+      <div class="card">
+        <table class="list">
+          <thead>
+            <tr>
+              <th>Nome</th>
+              <th>Tipologia</th>
+              <th class="num">Budget</th>
+              <th>Zona</th>
+              <th style="text-align:center;">Vende</th>
+              <th style="text-align:center;">Mutuo</th>
+              <th>Annunci inviati</th>
+              <th style="text-align:center;">Richiamato</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody id="acquirenti-body"></tbody>
+        </table>
+        <div class="empty" id="acquirenti-empty" style="display:none;">
+          <i class="ti ti-search" aria-hidden="true"></i>
+          Nessun acquirente in archivio. Aggiungine uno per iniziare a costruire la pipeline ricerche.
+        </div>
+      </div>
+    </div>
+
+  </section>
+
+  <!-- ===================== IMMOBILI FRIMM ===================== -->
+  <section class="view" id="view-immobili">
+    <div class="toolbar">
+      <div style="font-size:13px;color:var(--slate);">Annunci disponibili su <a href="https://frimmacademymilano.it/" target="_blank" rel="noopener">frimmacademymilano.it</a>. Inseriscili qui per vedere subito a quali acquirenti proporli.</div>
+      <button class="btn" id="add-immobile-btn"><i class="ti ti-plus" aria-hidden="true"></i> Nuovo immobile</button>
+    </div>
+
+    <div class="card" id="new-immobile-card" style="display:none;">
+      <h2>Nuovo immobile da Frimm</h2>
+      <div class="form-row">
+        <input type="text" id="im-titolo" placeholder="Titolo annuncio">
+        <select id="im-tipo">
+          <option value="bilocale">Bilocale</option>
+          <option value="trilocale">Trilocale</option>
+          <option value="quadrilocale">Quadrilocale</option>
+          <option value="villa">Villa</option>
+          <option value="ufficio">Ufficio</option>
+          <option value="negozio">Negozio</option>
+          <option value="altro">Altro</option>
+        </select>
+        <input type="text" id="im-zona" placeholder="Zona">
+      </div>
+      <div class="form-row">
+        <input type="text" id="im-prezzo" placeholder="Prezzo (&euro;)">
+        <input type="url" id="im-link" placeholder="Link annuncio Frimm">
+        <button class="btn" id="im-save">Salva immobile</button>
+        <button class="btn secondary" id="im-cancel">Annulla</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <table class="list">
+        <thead>
+          <tr>
+            <th>Annuncio</th>
+            <th>Tipologia</th>
+            <th>Zona</th>
+            <th class="num">Prezzo</th>
+            <th>Acquirenti compatibili</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody id="immobili-body"></tbody>
+      </table>
+      <div class="empty" id="immobili-empty" style="display:none;">
+        <i class="ti ti-building-skyscraper" aria-hidden="true"></i>
+        Nessun immobile inserito. Aggiungi i nuovi annunci Frimm per vedere i match con i tuoi acquirenti.
+      </div>
+    </div>
+  </section>
+
+  <!-- ===================== TEAM ===================== -->
+  <section class="view" id="view-team">
+    <div class="card">
+      <h2>Classifica produzione &mdash; gennaio/giugno 2026</h2>
+      <table class="list">
+        <thead>
+          <tr>
+            <th class="rank">#</th>
+            <th>Agente</th>
+            <th class="num">Notizie</th>
+            <th class="num">Incarichi attivi</th>
+            <th class="num">Incarichi totali</th>
+            <th class="num">Venduti</th>
+            <th class="num">Produzione</th>
+            <th class="num">Obiettivo</th>
+            <th>% obiettivo</th>
+          </tr>
+        </thead>
+        <tbody id="team-body"></tbody>
+      </table>
+    </div>
+
+    <div class="card">
+      <h2>Confronto produzione</h2>
+      <div style="position:relative;width:100%;height:340px;">
+        <canvas id="teamChart" role="img" aria-label="Grafico a barre orizzontali della produzione di ciascun agente del team confrontata con il proprio obiettivo annuo">Produzione per agente confrontata con obiettivo.</canvas>
+      </div>
+    </div>
+  </section>
+
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<script>
+/* ============================================================
+   DATI INIZIALI (da INCASSI 2026 - foglio Arcangelo + riepilogo)
+   ============================================================ */
+const SEED = {
+  obiettivo: 160000,
+  produzioneAttuale: 63637.60,
+  monthly: {
+    labels: ['Gen','Feb','Mar','Apr','Mag','Giu'],
+    incassato: [45680, 110247, 173160, 59623, 165749.65, 16930],
+    obiettivoTeam: [125000,250000,375000,500000,625000,750000]
+  },
+  team: [
+    {nome:'TOMMASO', notizie:36, attivi:31, totali:10, venduti:3, produzione:85750.00, obiettivo:100000},
+    {nome:'FRATTO', notizie:20, attivi:6, totali:6, venduti:0, produzione:63366.00, obiettivo:112500},
+    {nome:'ARCANGELO', notizie:66, attivi:9, totali:15, venduti:6, produzione:63637.60, obiettivo:160000, me:true},
+    {nome:'PAOLA', notizie:0, attivi:0, totali:0, venduti:0, produzione:62819.72, obiettivo:150000},
+    {nome:'LUCA', notizie:30, attivi:7, totali:8, venduti:2, produzione:30296.33, obiettivo:60000},
+    {nome:'FABIO', notizie:37, attivi:3, totali:6, venduti:0, produzione:51332.00, obiettivo:125000},
+    {nome:'FILIPPO', notizie:13, attivi:0, totali:0, venduti:0, produzione:50477.00, obiettivo:120000},
+    {nome:'LOVISONE', notizie:34, attivi:12, totali:13, venduti:0, produzione:48232.00, obiettivo:120000},
+    {nome:'LENZI', notizie:72, attivi:0, totali:0, venduti:0, produzione:41400.00, obiettivo:125000},
+    {nome:'ELEONORA', notizie:31, attivi:3, totali:6, venduti:3, produzione:36409.60, obiettivo:100000},
+    {nome:'VITTORIA', notizie:34, attivi:3, totali:3, venduti:0, produzione:21148.00, obiettivo:70000},
+    {nome:'BEATRICE', notizie:8, attivi:1, totali:1, venduti:0, produzione:9059.40, obiettivo:40000},
+    {nome:'GIOVANNI', notizie:7, attivi:2, totali:3, venduti:0, produzione:7462.00, obiettivo:40000}
+  ],
+  notizie: [
+    {id:'n1', titolo:'Via Tiziano 21', fonte:'REFERENZA', appuntamento:true, incarico:true, venduto:false, provv:0, segnalatore:'MILENA'},
+    {id:'n2', titolo:'Viale Umbria 64 (affitto)', fonte:'LEAD', appuntamento:true, incarico:true, venduto:true, provv:491.00, segnalatore:'AGENZIA'},
+    {id:'n3', titolo:'Via Casati 27', fonte:'REFERENZA', appuntamento:true, incarico:true, venduto:true, provv:7017.10, segnalatore:'ANDREA'},
+    {id:'n4', titolo:'Maslianico', fonte:'COLLABORAZIONE', appuntamento:true, incarico:true, venduto:false, provv:0, segnalatore:'ROMINA'},
+    {id:'n5', titolo:'Via Palestrina 18', fonte:'REFERENZA', appuntamento:true, incarico:true, venduto:false, provv:0, segnalatore:'ANDREA'},
+    {id:'n6', titolo:'Via Ripamonti', fonte:'REFERENZA', appuntamento:true, incarico:true, venduto:true, provv:3240.00, segnalatore:'EDDA'},
+    {id:'n7', titolo:'Conca del Naviglio 35', fonte:'LEAD', appuntamento:true, incarico:true, venduto:true, provv:4334.00, segnalatore:'AGENZIA'},
+    {id:'n8', titolo:'Capannone CIS', fonte:'REFERENZA', appuntamento:true, incarico:true, venduto:false, provv:0, segnalatore:'BRUNO MAIELLO'},
+    {id:'n9', titolo:'Via Nirone 10', fonte:'REFERENZA', appuntamento:true, incarico:true, venduto:false, provv:1036.00, segnalatore:'VITTORIO'},
+    {id:'n10', titolo:'Inama 15 2', fonte:'REFERENZA', appuntamento:true, incarico:true, venduto:false, provv:0, segnalatore:'LAURA INAMA'},
+    {id:'n11', titolo:'Viale Umbria 64 affitto', fonte:'DA INCARICO', appuntamento:true, incarico:true, venduto:false, provv:0, segnalatore:'AGENZIA'},
+    {id:'n12', titolo:'Via Mac Mahon', fonte:'REFERENZA', appuntamento:false, incarico:false, venduto:false, provv:1480.00, segnalatore:'PAOLA'},
+    {id:'n13', titolo:'Affitto Piola', fonte:'LEAD', appuntamento:true, incarico:false, venduto:false, provv:0, segnalatore:'CHIARA'},
+    {id:'n14', titolo:'Lainate', fonte:'REFERENZA', appuntamento:true, incarico:false, venduto:false, provv:0, segnalatore:'PINO'},
+    {id:'n15', titolo:'Via Pistrucci 11', fonte:'REFERENZA', appuntamento:true, incarico:false, venduto:false, provv:0, segnalatore:'VITTORIO'},
+    {id:'n16', titolo:'Via Cividale del Friuli', fonte:'LEAD', appuntamento:true, incarico:false, venduto:false, provv:0, segnalatore:'ROBERTA'},
+    {id:'n17', titolo:'Via Boscovich 14', fonte:'REFERENZA', appuntamento:true, incarico:false, venduto:false, provv:0, segnalatore:'NETRAIS'},
+    {id:'n18', titolo:'Via Pellini', fonte:'REFERENZA', appuntamento:true, incarico:false, venduto:false, provv:0, segnalatore:'NETRAIS'},
+    {id:'n19', titolo:'Via Govone 72', fonte:'REFERENZA', appuntamento:true, incarico:false, venduto:false, provv:0, segnalatore:'RUBEN'},
+    {id:'n20', titolo:'Piazzale Lodi', fonte:'LEAD', appuntamento:true, incarico:false, venduto:false, provv:0, segnalatore:''}
+  ],
+  incarichi: [
+    {id:'i1', titolo:'San Senatore 5', valore:'', provv:'6.000', stato:'da_incarico', cliente:'VITTORIA'},
+    {id:'i2', titolo:'Conca del Naviglio', valore:'490.000', provv:'24.000 (incassato)', stato:'incassato', cliente:'REFERENZA'},
+    {id:'i3', titolo:'Via Ripamonti', valore:'205.000', provv:'10.000 (incassato)', stato:'incassato', cliente:'GIOVANNI'},
+    {id:'i4', titolo:'Via Casati', valore:'633.000', provv:'22.400 (incassato)', stato:'incassato', cliente:'ARCANGELO'},
+    {id:'i5', titolo:'Affitto via Nirone', valore:'', provv:'2.880 (incassato)', stato:'incassato', cliente:'ARCANGELO'},
+    {id:'i6', titolo:'Capannone CIS (Bruno Maiello)', valore:'', provv:'3% atteso', stato:'attivo', cliente:'BRUNO MAIELLO'},
+    {id:'i7', titolo:'Via Nirone 10 (Vittorio)', valore:'', provv:'0% - in trattativa', stato:'attivo', cliente:'VITTORIO'},
+    {id:'i8', titolo:'Via Casati 27 (Andrea)', valore:'', provv:'1.5% - venduto', stato:'venduto', cliente:'ANDREA'},
+    {id:'i9', titolo:'Via Ripamonti (Edda)', valore:'', provv:'0% - venduto', stato:'venduto', cliente:'EDDA'},
+    {id:'i10', titolo:'Conca del Naviglio 35 (Agenzia)', valore:'', provv:'1.5% - venduto', stato:'venduto', cliente:'AGENZIA'},
+    {id:'i11', titolo:'Viale Umbria 64 (affitto, agenzia)', valore:'', provv:'venduto', stato:'venduto', cliente:'AGENZIA'},
+    {id:'i12', titolo:'Via Tiziano 21 (Milena)', valore:'', provv:'3% atteso', stato:'attivo', cliente:'MILENA'},
+    {id:'i13', titolo:'Maslianico (Romina)', valore:'', provv:'in valutazione', stato:'attivo', cliente:'ROMINA'},
+    {id:'i14', titolo:'Via Palestrina 18 (Andrea)', valore:'', provv:'3% atteso', stato:'attivo', cliente:'ANDREA'},
+    {id:'i15', titolo:'Inama 15 (Laura)', valore:'', provv:'da definire', stato:'da_incarico', cliente:'LAURA INAMA'}
+  ],
+  venditori: [
+    {id:'v1', nome:'Famiglia Rossi', immobile:'Via Conca del Naviglio 37', tipo:'bilocale', prezzo:'490.000', fonte:'AGENZIA', link:'', richiamato:true},
+    {id:'v2', nome:'Sig.ra Bianchi', immobile:'Via Casati 27', tipo:'trilocale', prezzo:'633.000', fonte:'ANDREA', link:'https://frimmacademymilano.it/immobili-in-vendita/', richiamato:true}
+  ],
+  segnalatori: [
+    {id:'sg1', nome:'Andrea', relazione:'ex cliente', contatto:'', note:'Segnalata Via Casati e Via Palestrina', richiamato:true},
+    {id:'sg2', nome:'Vittorio', relazione:'collega altra agenzia', contatto:'', note:'Segnalato Via Nirone 10 e Via Govone 72', richiamato:false},
+    {id:'sg3', nome:'Bruno Maiello', relazione:'contatto commerciale', contatto:'', note:'Segnalato Capannone CIS', richiamato:false}
+  ],
+  acquirenti: [
+    {id:'a1', nome:'Linda', tipo:'villa', budget:'900.000', zona:'Milano nord', vende:'si', mutuo:'no', fonte:'REFERENZA', annunci:'', richiamato:true},
+    {id:'a2', nome:'Alice', tipo:'appartamento', budget:'', zona:'', vende:'si', mutuo:'no', fonte:'REFERENZA', annunci:'', richiamato:false},
+    {id:'a3', nome:'Simone', tipo:'trilocale', budget:'450.000', zona:'', vende:'no', mutuo:'si', fonte:'REFERENZA', annunci:'', richiamato:true},
+    {id:'a4', nome:'Alessandro', tipo:'trilocale', budget:'450.000', zona:'', vende:'no', mutuo:'si', fonte:'MANNELLA', annunci:'', richiamato:false},
+    {id:'a5', nome:'Notaio (ufficio 110mq)', tipo:'ufficio', budget:'5.000 (provv.)', zona:'', vende:'no', mutuo:'no', fonte:'GUSTAVO', annunci:'', richiamato:false}
+  ],
+  immobili: [
+    {id:'im1', titolo:'Trilocale ristrutturato Via Casati 27', tipo:'trilocale', zona:'Porta Venezia', prezzo:'633.000', link:'https://frimmacademymilano.it/immobili-in-vendita/'},
+    {id:'im2', titolo:'Quadrilocale 140mq Viale Caldara 31', tipo:'quadrilocale', zona:'Porta Romana', prezzo:'', link:'https://frimmacademymilano.it/immobili-in-vendita/'},
+    {id:'im3', titolo:'Bilocale Via Conca del Naviglio 37', tipo:'bilocale', zona:'Corso Genova', prezzo:'490.000', link:'https://frimmacademymilano.it/immobili-in-vendita/'}
+  ]
+};
+
+const STORAGE_KEY = 'arcangelo-data';
+let state = null;
+let saveTimer = null;
+
+function fmtEuro(n){
+  return new Intl.NumberFormat('it-IT',{style:'currency',currency:'EUR',maximumFractionDigits:0}).format(n||0);
+}
+function fmtPct(n){
+  return (Math.round(n*10)/10).toFixed(1).replace('.', ',') + '%';
+}
+
+/* ============================================================
+   STORAGE (Google Apps Script Web App)
+   ============================================================ */
+// INSERISCI QUI L'URL della tua Web App di Apps Script (termina con /exec)
+const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxmHwgbP9B4civTfptFMrOofRPwyqRkNANlGydRvlGkpQzytvvyB40pOgP576eL1hHC/exec';
+
+async function loadState(){
+  if(!APPS_SCRIPT_URL || APPS_SCRIPT_URL.indexOf('INSERISCI')!==-1){
+    document.getElementById('save-status').textContent = 'URL Apps Script non configurato';
+    return JSON.parse(JSON.stringify(SEED));
+  }
+  try{
+    document.getElementById('save-status').textContent = 'caricamento dati...';
+    const res = await fetch(APPS_SCRIPT_URL);
+    if(!res.ok) throw new Error('Risposta non valida');
+    const data = await res.json();
+    // Se il foglio è vuoto (nessuna notizia/incarico/team), usa SEED come fallback
+    if((!data.notizie || data.notizie.length===0) && (!data.team || data.team.length===0)){
+      document.getElementById('save-status').textContent = 'foglio vuoto, dati di partenza';
+      return JSON.parse(JSON.stringify(SEED));
+    }
+    document.getElementById('save-status').textContent = 'tutto sincronizzato';
+    return data;
+  }catch(e){
+    console.error(e);
+    document.getElementById('save-status').textContent = 'errore caricamento, dati locali';
+    return JSON.parse(JSON.stringify(SEED));
+  }
+}
+
+async function saveState(){
+  if(!APPS_SCRIPT_URL || APPS_SCRIPT_URL.indexOf('INSERISCI')!==-1){
+    document.getElementById('save-status').textContent = 'URL Apps Script non configurato';
+    return;
+  }
+  document.getElementById('save-status').textContent = 'salvataggio...';
+  try{
+    await fetch(APPS_SCRIPT_URL, {
+      method: 'POST',
+      headers: {'Content-Type':'text/plain;charset=utf-8'},
+      body: JSON.stringify(state)
+    });
+    document.getElementById('save-status').textContent = 'tutto sincronizzato';
+  }catch(e){
+    document.getElementById('save-status').textContent = 'errore salvataggio';
+    console.error(e);
+  }
+}
+function scheduleSave(){
+  document.getElementById('save-status').textContent = 'modifiche non salvate...';
+  clearTimeout(saveTimer);
+  saveTimer = setTimeout(saveState, 600);
+}
+
+/* ============================================================
+   TABS
+   ============================================================ */
+document.querySelectorAll('nav.tabs button').forEach(btn=>{
+  btn.addEventListener('click', ()=>{
+    document.querySelectorAll('nav.tabs button').forEach(b=>b.classList.remove('active'));
+    document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
+    btn.classList.add('active');
+    document.getElementById('view-'+btn.dataset.view).classList.add('active');
+  });
+});
+
+document.querySelectorAll('nav.subtabs button').forEach(btn=>{
+  btn.addEventListener('click', ()=>{
+    document.querySelectorAll('nav.subtabs button').forEach(b=>b.classList.remove('active'));
+    document.querySelectorAll('.subview').forEach(v=>v.classList.remove('active'));
+    btn.classList.add('active');
+    document.getElementById('sub-'+btn.dataset.sub).classList.add('active');
+  });
+});
+
+/* ============================================================
+   RENDER: DASHBOARD
+   ============================================================ */
+function renderDashboard(){
+  const me = state.team.find(t=>t.me);
+  const pct = (me.produzione/state.obiettivo)*100;
+
+  // KPI grid
+  const notizieTotali = state.notizie.length;
+  const conAppuntamento = state.notizie.filter(n=>n.appuntamento).length;
+  const conIncarico = state.notizie.filter(n=>n.incarico).length;
+  const venduti = state.notizie.filter(n=>n.venduto).length;
+  const incarichiAttivi = state.incarichi.filter(i=>i.stato==='attivo'||i.stato==='da_incarico').length;
+  const incarichiVenduti = state.incarichi.filter(i=>i.stato==='venduto'||i.stato==='incassato').length;
+
+  const kpis = [
+    {label:'Produzione personale', value: fmtEuro(me.produzione), delta:`Obiettivo ${fmtEuro(state.obiettivo)}`, accent:true},
+    {label:'% obiettivo raggiunto', value: fmtPct(pct), delta: pct>=40 ? 'In linea con il team' : 'Sotto la media team', deltaClass: pct>=40?'pos':'neg'},
+    {label:'Notizie totali', value: notizieTotali, delta:`${conAppuntamento} con appuntamento`},
+    {label:'Incarichi attivi', value: incarichiAttivi, delta:`${incarichiVenduti} venduti/incassati`}
+  ];
+  const grid = document.getElementById('kpi-grid');
+  grid.innerHTML = kpis.map(k=>`
+    <div class="kpi ${k.accent?'accent':''}">
+      <p class="label">${k.label}</p>
+      <p class="value">${k.value}</p>
+      <p class="delta ${k.deltaClass||''}">${k.delta}</p>
+    </div>
+  `).join('');
+
+  // Obiettivo progress
+  document.getElementById('obj-pct-tag').textContent = fmtPct(pct);
+  document.getElementById('obj-numbers').textContent = `${fmtEuro(me.produzione)} di ${fmtEuro(state.obiettivo)}`;
+  const fill = document.getElementById('obj-fill');
+  fill.style.width = Math.min(pct,100)+'%';
+  fill.className = 'progress-fill ' + (pct<30?'low':pct<60?'mid':'high');
+
+  // Funnel
+  const funnelSteps = [
+    {label:'Notizie', value: notizieTotali, max: notizieTotali},
+    {label:'Appuntamento fissato', value: conAppuntamento, max: notizieTotali},
+    {label:'Incarico ottenuto', value: conIncarico, max: notizieTotali},
+    {label:'Venduto', value: venduti, max: notizieTotali}
+  ];
+  document.getElementById('funnel').innerHTML = funnelSteps.map(s=>{
+    const pct = notizieTotali ? (s.value/notizieTotali*100) : 0;
+    return `<div class="progress-row">
+      <div class="pr-head"><span class="name">${s.label}</span><span>${s.value} &middot; ${fmtPct(pct)}</span></div>
+      <div class="progress-track"><div class="progress-fill ${pct<25?'low':pct<60?'mid':'high'}" style="width:${pct}%"></div></div>
+    </div>`;
+  }).join('');
+
+  // Azioni prioritarie - specifiche per cliente
+  const actions = [];
+  state.notizie.filter(n=>!n.appuntamento).forEach(n=>{
+    actions.push({icon:'ti-calendar-plus', cat:'Notizia', text:`"${n.titolo}"`, action:`Telefona e fissa un appuntamento di valutazione`});
+  });
+  state.notizie.filter(n=>n.appuntamento && !n.incarico).forEach(n=>{
+    actions.push({icon:'ti-file-text', cat:'Notizia', text:`"${n.titolo}"`, action:`Dopo l'appuntamento, proponi e chiudi l'incarico`});
+  });
+  state.venditori.filter(v=>!v.richiamato).forEach(v=>{
+    actions.push({icon:'ti-phone', cat:'Proprietario', text:`${v.nome} (${v.immobile})`, action: v.link ? `Richiama per aggiornamento su visite/offerte sull'annuncio` : `Richiama e organizza la pubblicazione dell'annuncio su Frimm`});
+  });
+  state.acquirenti.filter(a=>!a.richiamato).forEach(a=>{
+    const matches = findMatches(a);
+    actions.push({icon:'ti-phone', cat:'Acquirente', text:`${a.nome}`, action: matches.length ? `Richiamalo: ci sono ${matches.length} immobile/i compatibile/i da proporre` : `Richiamalo per aggiornare i criteri di ricerca`});
+  });
+  state.segnalatori.filter(s=>!s.richiamato).forEach(s=>{
+    actions.push({icon:'ti-speakerphone', cat:'Segnalatore', text:`${s.nome}`, action:`Ricontattalo per ringraziarlo e chiedere nuove segnalazioni`});
+  });
+  state.incarichi.filter(i=>i.stato==='venduto').forEach(i=>{
+    actions.push({icon:'ti-cash', cat:'Incarico venduto', text:`"${i.titolo}"`, action:`Sollecita il rogito/incasso della provvigione`});
+  });
+  state.incarichi.filter(i=>i.stato==='da_incarico').forEach(i=>{
+    actions.push({icon:'ti-clipboard-text', cat:'Da incarico', text:`"${i.titolo}"`, action:`Porta a firma l'incarico in esclusiva`});
+  });
+
+  document.getElementById('actions-tag').textContent = actions.length;
+  const actionList = document.getElementById('action-list');
+  if(actions.length===0){
+    actionList.innerHTML = `<div class="empty"><i class="ti ti-check" aria-hidden="true"></i>Tutto sotto controllo: nessuna azione urgente.</div>`;
+  }else{
+    actionList.innerHTML = actions.map(a=>`
+      <div style="display:flex;align-items:flex-start;gap:10px;padding:9px 0;border-bottom:1px solid var(--line);font-size:13px;">
+        <i class="ti ${a.icon}" style="color:var(--brass);font-size:16px;margin-top:2px;" aria-hidden="true"></i>
+        <div>
+          <span class="badge todo" style="margin-right:6px;">${a.cat}</span>
+          <strong>${a.text}</strong>
+          <div style="color:var(--slate);margin-top:2px;">${a.action}</div>
+        </div>
+      </div>
+    `).join('');
+  }
+
+  document.getElementById('obj-input').value = state.obiettivo;
+
+  renderIncomeChart();
+}
+
+let incomeChartInstance = null;
+function renderIncomeChart(){
+  const ctx = document.getElementById('incomeChart');
+  if(incomeChartInstance) incomeChartInstance.destroy();
+  incomeChartInstance = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels: state.monthly.labels,
+      datasets: [
+        {
+          label: 'Incassato team',
+          data: state.monthly.incassato,
+          backgroundColor: '#b8863c',
+          borderRadius: 3
+        },
+        {
+          label: 'Obiettivo team (cumulato)',
+          data: state.monthly.obiettivoTeam,
+          type: 'line',
+          borderColor: '#1f2a30',
+          borderDash: [4,3],
+          backgroundColor: 'transparent',
+          pointRadius: 3,
+          tension: 0.2
+        }
+      ]
+    },
+    options: {
+      responsive:true, maintainAspectRatio:false,
+      plugins:{legend:{display:false}},
+      scales:{
+        y:{ ticks:{ callback:(v)=>'€'+(v/1000)+'k' } }
+      }
+    }
+  });
+}
+
+/* ============================================================
+   RENDER: NOTIZIE
+   ============================================================ */
+const fonteBadgeClass = {
+  'REFERENZA':'referenza','LEAD':'lead','DA INCARICO':'incarico',
+  'COLLABORAZIONE':'collab','DA VENDITA':'vendita','PRIVATO':'privato'
+};
+function renderNotizie(){
+  const body = document.getElementById('notizie-body');
+  const empty = document.getElementById('notizie-empty');
+  if(state.notizie.length===0){
+    body.innerHTML=''; empty.style.display='block'; return;
+  }
+  empty.style.display='none';
+  body.innerHTML = state.notizie.map(n=>{
+    const cls = fonteBadgeClass[n.fonte]||'privato';
+    return `<tr data-id="${n.id}">
+      <td>
+        <div style="font-weight:600;">${escapeHtml(n.titolo)}</div>
+        ${n.segnalatore?`<div style="font-size:11px;color:var(--slate);">via ${escapeHtml(n.segnalatore)}</div>`:''}
+      </td>
+      <td><span class="badge ${cls}">${n.fonte}</span></td>
+      <td style="text-align:center;"><input type="checkbox" class="check" data-field="appuntamento" ${n.appuntamento?'checked':''}></td>
+      <td style="text-align:center;"><input type="checkbox" class="check" data-field="incarico" ${n.incarico?'checked':''}></td>
+      <td style="text-align:center;"><input type="checkbox" class="check" data-field="venduto" ${n.venduto?'checked':''}></td>
+      <td class="num">${n.provv ? fmtEuro(n.provv) : '&mdash;'}</td>
+      <td><button class="btn secondary btn-sm" data-del="${n.id}"><i class="ti ti-trash" aria-hidden="true"></i></button></td>
+    </tr>`;
+  }).join('');
+
+  body.querySelectorAll('input.check').forEach(chk=>{
+    chk.addEventListener('change', e=>{
+      const id = e.target.closest('tr').dataset.id;
+      const field = e.target.dataset.field;
+      const item = state.notizie.find(n=>n.id===id);
+      item[field] = e.target.checked;
+      if(field==='incarico' && e.target.checked){
+        const exists = state.incarichi.some(i=>i.daNotizia===item.id);
+        if(!exists){
+          state.incarichi.push({
+            id: 'i'+Date.now(),
+            titolo: item.titolo,
+            valore: '',
+            provv: item.provv ? fmtEuro(item.provv) : '',
+            stato: 'da_incarico',
+            cliente: item.segnalatore || '',
+            daNotizia: item.id
+          });
+          renderPipeline();
+          alert(`"${item.titolo}" è stato aggiunto alla Pipeline incarichi, colonna "Da incarico".`);
+        }
+      }
+      scheduleSave();
+      renderNotizie();
+      renderDashboard();
+    });
+  });
+  body.querySelectorAll('button[data-del]').forEach(b=>{
+    b.addEventListener('click', e=>{
+      const id = e.target.closest('button').dataset.del;
+      const item = state.notizie.find(n=>n.id===id);
+      if(!confirm(`Eliminare definitivamente la notizia "${item.titolo}"?\n\nQuesta azione non può essere annullata.`)) return;
+      state.notizie = state.notizie.filter(n=>n.id!==id);
+      scheduleSave();
+      renderNotizie();
+      renderDashboard();
+    });
+  });
+}
+
+document.getElementById('add-notizia-btn').addEventListener('click', ()=>{
+  const card = document.getElementById('new-notizia-card');
+  card.style.display = card.style.display==='none' ? 'block' : 'none';
+});
+document.getElementById('n-cancel').addEventListener('click', ()=>{
+  document.getElementById('new-notizia-card').style.display='none';
+});
+document.getElementById('n-save').addEventListener('click', ()=>{
+  const titolo = document.getElementById('n-titolo').value.trim();
+  if(!titolo) return;
+  state.notizie.push({
+    id: 'n'+Date.now(),
+    titolo,
+    fonte: document.getElementById('n-fonte').value,
+    segnalatore: document.getElementById('n-segnalatore').value.trim(),
+    appuntamento:false, incarico:false, venduto:false, provv:0
+  });
+  document.getElementById('n-titolo').value='';
+  document.getElementById('n-segnalatore').value='';
+  document.getElementById('new-notizia-card').style.display='none';
+  scheduleSave();
+  renderNotizie();
+  renderDashboard();
+});
+
+/* ============================================================
+   RENDER: PIPELINE
+   ============================================================ */
+const PIPELINE_STAGES = [
+  {key:'da_incarico', label:'Da incarico'},
+  {key:'attivo', label:'Attivo'},
+  {key:'venduto', label:'Venduto'},
+  {key:'incassato', label:'Incassato'}
+];
+function renderPipeline(){
+  const cols = document.getElementById('pipeline-cols');
+  cols.innerHTML = PIPELINE_STAGES.map(stage=>{
+    const items = state.incarichi.filter(i=>i.stato===stage.key);
+    return `<div class="pipeline-col">
+      <h3>${stage.label}<span>${items.length}</span></h3>
+      ${items.map(i=>`
+        <div class="pipeline-card" data-id="${i.id}">
+          <div class="pc-title">${escapeHtml(i.titolo)}</div>
+          <div class="pc-meta">${i.valore?fmtEuro(parseLooseNumber(i.valore))+' &middot; ':''}${escapeHtml(i.provv||'')}</div>
+          <div class="pc-meta">cliente: ${escapeHtml(i.cliente||'-')}</div>
+          <div class="form-row" style="margin:8px 0 0;gap:6px;">
+            <select data-move="${i.id}" style="font-size:11px;padding:4px 6px;">
+              ${PIPELINE_STAGES.map(s=>`<option value="${s.key}" ${s.key===i.stato?'selected':''}>${s.label}</option>`).join('')}
+            </select>
+            <button class="btn secondary btn-sm" data-del-inc="${i.id}"><i class="ti ti-trash" aria-hidden="true"></i></button>
+          </div>
+        </div>
+      `).join('') || '<div class="empty" style="padding:14px 4px;"><i class="ti ti-folder" aria-hidden="true"></i>vuoto</div>'}
+    </div>`;
+  }).join('');
+
+  cols.querySelectorAll('select[data-move]').forEach(sel=>{
+    sel.addEventListener('change', e=>{
+      const id = e.target.dataset.move;
+      const item = state.incarichi.find(i=>i.id===id);
+      item.stato = e.target.value;
+      scheduleSave();
+      renderPipeline();
+      renderDashboard();
+    });
+  });
+  cols.querySelectorAll('button[data-del-inc]').forEach(b=>{
+    b.addEventListener('click', e=>{
+      const id = e.target.closest('button').dataset.delInc;
+      const item = state.incarichi.find(i=>i.id===id);
+      if(!confirm(`Eliminare definitivamente l'incarico "${item.titolo}"?\n\nQuesta azione non può essere annullata.`)) return;
+      state.incarichi = state.incarichi.filter(i=>i.id!==id);
+      scheduleSave();
+      renderPipeline();
+      renderDashboard();
+    });
+  });
+}
+function parseLooseNumber(str){
+  if(typeof str !== 'string') return Number(str)||0;
+  const cleaned = str.replace(/[^\d,.-]/g,'').replace(/\./g,'').replace(',','.');
+  return Number(cleaned)||0;
+}
+
+document.getElementById('add-incarico-btn').addEventListener('click', ()=>{
+  const card = document.getElementById('new-incarico-card');
+  card.style.display = card.style.display==='none' ? 'block' : 'none';
+});
+document.getElementById('i-cancel').addEventListener('click', ()=>{
+  document.getElementById('new-incarico-card').style.display='none';
+});
+document.getElementById('i-save').addEventListener('click', ()=>{
+  const titolo = document.getElementById('i-titolo').value.trim();
+  if(!titolo) return;
+  state.incarichi.push({
+    id: 'i'+Date.now(),
+    titolo,
+    valore: document.getElementById('i-valore').value.trim(),
+    provv: document.getElementById('i-provv').value.trim(),
+    stato: document.getElementById('i-stato').value,
+    cliente: document.getElementById('i-cliente').value.trim()
+  });
+  ['i-titolo','i-valore','i-provv','i-cliente'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('new-incarico-card').style.display='none';
+  scheduleSave();
+  renderPipeline();
+  renderDashboard();
+});
+
+/* ============================================================
+   RENDER: VENDITORI
+   ============================================================ */
+function renderVenditori(){
+  const body = document.getElementById('venditori-body');
+  const empty = document.getElementById('venditori-empty');
+  if(state.venditori.length===0){
+    body.innerHTML=''; empty.style.display='block'; return;
+  }
+  empty.style.display='none';
+  body.innerHTML = state.venditori.map(v=>`
+    <tr data-id="${v.id}">
+      <td style="font-weight:600;">${escapeHtml(v.nome)}</td>
+      <td>${escapeHtml(v.immobile)}</td>
+      <td>${capitalize(v.tipo)}</td>
+      <td class="num">${v.prezzo ? (isFinite(parseLooseNumber(v.prezzo)) && parseLooseNumber(v.prezzo)>0 ? fmtEuro(parseLooseNumber(v.prezzo)) : escapeHtml(v.prezzo)) : '&mdash;'}</td>
+      <td>${escapeHtml(v.fonte||'-')}</td>
+      <td>${v.link ? `<a href="${escapeHtml(v.link)}" target="_blank" rel="noopener"><i class="ti ti-external-link" aria-hidden="true"></i> annuncio</a>` : '<span class="badge todo">da pubblicare</span>'}</td>
+      <td style="text-align:center;"><input type="checkbox" class="check" data-field="richiamato" ${v.richiamato?'checked':''}></td>
+      <td><button class="btn secondary btn-sm" data-del="${v.id}"><i class="ti ti-trash" aria-hidden="true"></i></button></td>
+    </tr>
+  `).join('');
+
+  body.querySelectorAll('input.check').forEach(chk=>{
+    chk.addEventListener('change', e=>{
+      const id = e.target.closest('tr').dataset.id;
+      const item = state.venditori.find(v=>v.id===id);
+      item.richiamato = e.target.checked;
+      scheduleSave();
+      renderDashboard();
+    });
+  });
+  body.querySelectorAll('button[data-del]').forEach(b=>{
+    b.addEventListener('click', e=>{
+      const id = e.target.closest('button').dataset.del;
+      const item = state.venditori.find(v=>v.id===id);
+      if(!confirm(`Eliminare definitivamente il proprietario "${item.nome}" (${item.immobile})?\n\nQuesta azione non può essere annullata.`)) return;
+      state.venditori = state.venditori.filter(v=>v.id!==id);
+      scheduleSave();
+      renderVenditori();
+      renderDashboard();
+    });
+  });
+}
+function capitalize(s){ return s ? s.charAt(0).toUpperCase()+s.slice(1) : ''; }
+
+document.getElementById('add-venditore-btn').addEventListener('click', ()=>{
+  const card = document.getElementById('new-venditore-card');
+  card.style.display = card.style.display==='none' ? 'block' : 'none';
+});
+document.getElementById('v-cancel').addEventListener('click', ()=>{
+  document.getElementById('new-venditore-card').style.display='none';
+});
+document.getElementById('v-save').addEventListener('click', ()=>{
+  const nome = document.getElementById('v-nome').value.trim();
+  if(!nome) return;
+  state.venditori.push({
+    id: 'v'+Date.now(),
+    nome,
+    immobile: document.getElementById('v-immobile').value.trim(),
+    tipo: document.getElementById('v-tipo').value,
+    prezzo: document.getElementById('v-prezzo').value.trim(),
+    fonte: document.getElementById('v-fonte').value.trim(),
+    link: document.getElementById('v-link').value.trim(),
+    richiamato:false
+  });
+  ['v-nome','v-immobile','v-prezzo','v-fonte','v-link'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('new-venditore-card').style.display='none';
+  scheduleSave();
+  renderVenditori();
+  renderDashboard();
+});
+
+/* ============================================================
+   RENDER: SEGNALATORI
+   ============================================================ */
+function renderSegnalatori(){
+  const body = document.getElementById('segnalatori-body');
+  const empty = document.getElementById('segnalatori-empty');
+  if(state.segnalatori.length===0){
+    body.innerHTML=''; empty.style.display='block'; return;
+  }
+  empty.style.display='none';
+  body.innerHTML = state.segnalatori.map(s=>`
+    <tr data-id="${s.id}">
+      <td style="font-weight:600;">${escapeHtml(s.nome)}</td>
+      <td>${escapeHtml(s.relazione||'-')}</td>
+      <td>${escapeHtml(s.contatto||'-')}</td>
+      <td>${escapeHtml(s.note||'-')}</td>
+      <td style="text-align:center;"><input type="checkbox" class="check" data-field="richiamato" ${s.richiamato?'checked':''}></td>
+      <td><button class="btn secondary btn-sm" data-del="${s.id}"><i class="ti ti-trash" aria-hidden="true"></i></button></td>
+    </tr>
+  `).join('');
+
+  body.querySelectorAll('input.check').forEach(chk=>{
+    chk.addEventListener('change', e=>{
+      const id = e.target.closest('tr').dataset.id;
+      const item = state.segnalatori.find(s=>s.id===id);
+      item.richiamato = e.target.checked;
+      scheduleSave();
+      renderDashboard();
+    });
+  });
+  body.querySelectorAll('button[data-del]').forEach(b=>{
+    b.addEventListener('click', e=>{
+      const id = e.target.closest('button').dataset.del;
+      const item = state.segnalatori.find(s=>s.id===id);
+      if(!confirm(`Eliminare definitivamente il segnalatore "${item.nome}"?\n\nQuesta azione non può essere annullata.`)) return;
+      state.segnalatori = state.segnalatori.filter(s=>s.id!==id);
+      scheduleSave();
+      renderSegnalatori();
+      renderDashboard();
+    });
+  });
+}
+
+document.getElementById('add-segnalatore-btn').addEventListener('click', ()=>{
+  const card = document.getElementById('new-segnalatore-card');
+  card.style.display = card.style.display==='none' ? 'block' : 'none';
+});
+document.getElementById('s-cancel').addEventListener('click', ()=>{
+  document.getElementById('new-segnalatore-card').style.display='none';
+});
+document.getElementById('s-save').addEventListener('click', ()=>{
+  const nome = document.getElementById('s-nome').value.trim();
+  if(!nome) return;
+  state.segnalatori.push({
+    id: 'sg'+Date.now(),
+    nome,
+    relazione: document.getElementById('s-relazione').value.trim(),
+    contatto: document.getElementById('s-contatto').value.trim(),
+    note: document.getElementById('s-note').value.trim(),
+    richiamato:false
+  });
+  ['s-nome','s-relazione','s-contatto','s-note'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('new-segnalatore-card').style.display='none';
+  scheduleSave();
+  renderSegnalatori();
+  renderDashboard();
+});
+
+/* ============================================================
+   RENDER: ACQUIRENTI
+   ============================================================ */
+function renderAcquirenti(){
+  const body = document.getElementById('acquirenti-body');
+  const empty = document.getElementById('acquirenti-empty');
+  if(state.acquirenti.length===0){
+    body.innerHTML=''; empty.style.display='block'; return;
+  }
+  empty.style.display='none';
+  body.innerHTML = state.acquirenti.map(a=>`
+    <tr data-id="${a.id}">
+      <td style="font-weight:600;">${escapeHtml(a.nome)}</td>
+      <td>${capitalize(a.tipo)}</td>
+      <td class="num">${a.budget ? (isFinite(parseLooseNumber(a.budget)) && parseLooseNumber(a.budget)>0 ? fmtEuro(parseLooseNumber(a.budget)) : escapeHtml(a.budget)) : '&mdash;'}</td>
+      <td>${escapeHtml(a.zona||'-')}</td>
+      <td style="text-align:center;"><span class="badge ${a.vende==='si'?'incarico':'todo'}">${a.vende==='si'?'Sì':'No'}</span></td>
+      <td style="text-align:center;"><span class="badge ${a.mutuo==='si'?'lead':'todo'}">${a.mutuo==='si'?'Sì':'No'}</span></td>
+      <td>
+        <input type="text" class="annunci-input" data-id="${a.id}" value="${escapeHtml(a.annunci||'')}" placeholder="link annunci inviati" style="width:100%;font-size:12px;padding:4px 6px;border:1px solid var(--line);border-radius:4px;background:var(--paper-2);color:var(--ink);">
+      </td>
+      <td style="text-align:center;"><input type="checkbox" class="check" data-field="richiamato" ${a.richiamato?'checked':''}></td>
+      <td><button class="btn secondary btn-sm" data-del="${a.id}"><i class="ti ti-trash" aria-hidden="true"></i></button></td>
+    </tr>
+  `).join('');
+
+  body.querySelectorAll('input.check').forEach(chk=>{
+    chk.addEventListener('change', e=>{
+      const id = e.target.closest('tr').dataset.id;
+      const item = state.acquirenti.find(a=>a.id===id);
+      item.richiamato = e.target.checked;
+      scheduleSave();
+      renderDashboard();
+    });
+  });
+  body.querySelectorAll('input.annunci-input').forEach(inp=>{
+    inp.addEventListener('change', e=>{
+      const id = e.target.dataset.id;
+      const item = state.acquirenti.find(a=>a.id===id);
+      item.annunci = e.target.value.trim();
+      scheduleSave();
+    });
+  });
+  body.querySelectorAll('button[data-del]').forEach(b=>{
+    b.addEventListener('click', e=>{
+      const id = e.target.closest('button').dataset.del;
+      const item = state.acquirenti.find(a=>a.id===id);
+      if(!confirm(`Eliminare definitivamente l'acquirente "${item.nome}"?\n\nQuesta azione non può essere annullata.`)) return;
+      state.acquirenti = state.acquirenti.filter(a=>a.id!==id);
+      scheduleSave();
+      renderAcquirenti();
+      renderDashboard();
+    });
+  });
+}
+
+document.getElementById('add-acquirente-btn').addEventListener('click', ()=>{
+  const card = document.getElementById('new-acquirente-card');
+  card.style.display = card.style.display==='none' ? 'block' : 'none';
+});
+document.getElementById('a-cancel').addEventListener('click', ()=>{
+  document.getElementById('new-acquirente-card').style.display='none';
+});
+document.getElementById('a-save').addEventListener('click', ()=>{
+  const nome = document.getElementById('a-nome').value.trim();
+  if(!nome) return;
+  state.acquirenti.push({
+    id: 'a'+Date.now(),
+    nome,
+    tipo: document.getElementById('a-tipo').value,
+    budget: document.getElementById('a-budget').value.trim(),
+    zona: document.getElementById('a-zona').value.trim(),
+    vende: document.getElementById('a-vende').value,
+    mutuo: document.getElementById('a-mutuo').value,
+    fonte: document.getElementById('a-fonte').value.trim(),
+    annunci:'',
+    richiamato:false
+  });
+  ['a-nome','a-budget','a-zona','a-fonte'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('new-acquirente-card').style.display='none';
+  scheduleSave();
+  renderAcquirenti();
+  renderDashboard();
+
+  const nuovoAcq = state.acquirenti[state.acquirenti.length-1];
+  const matches = findMatches(nuovoAcq);
+  if(matches.length){
+    alert(`"${nuovoAcq.nome}" è compatibile con ${matches.length} immobile/i già disponibile/i su Frimm:\n${matches.map(m=>'- '+m.titolo).join('\n')}\n\nVai su "Immobili Frimm" per inviarglieli.`);
+  }
+});
+
+
+/* ============================================================
+   MATCHING IMMOBILI <-> ACQUIRENTI
+   ============================================================ */
+// Trova gli immobili compatibili con un acquirente (tipo + budget)
+function findMatches(acquirente){
+  const budgetA = parseLooseNumber(acquirente.budget);
+  return state.immobili.filter(im=>{
+    if(im.tipo !== acquirente.tipo) return false;
+    const prezzoIm = parseLooseNumber(im.prezzo);
+    if(budgetA>0 && prezzoIm>0 && prezzoIm > budgetA*1.1) return false; // tolleranza 10%
+    return true;
+  });
+}
+// Trova gli acquirenti compatibili con un immobile (tipo + budget)
+function findBuyersFor(immobile){
+  const prezzoIm = parseLooseNumber(immobile.prezzo);
+  return state.acquirenti.filter(a=>{
+    if(a.tipo !== immobile.tipo) return false;
+    const budgetA = parseLooseNumber(a.budget);
+    if(budgetA>0 && prezzoIm>0 && prezzoIm > budgetA*1.1) return false;
+    return true;
+  });
+}
+
+/* ============================================================
+   RENDER: IMMOBILI FRIMM
+   ============================================================ */
+function renderImmobili(){
+  const body = document.getElementById('immobili-body');
+  const empty = document.getElementById('immobili-empty');
+  if(state.immobili.length===0){
+    body.innerHTML=''; empty.style.display='block'; return;
+  }
+  empty.style.display='none';
+  body.innerHTML = state.immobili.map(im=>{
+    const buyers = findBuyersFor(im);
+    return `<tr data-id="${im.id}">
+      <td>
+        <div style="font-weight:600;">${escapeHtml(im.titolo)}</div>
+        ${im.link?`<a href="${escapeHtml(im.link)}" target="_blank" rel="noopener"><i class="ti ti-external-link" aria-hidden="true"></i> apri annuncio</a>`:''}
+      </td>
+      <td>${capitalize(im.tipo)}</td>
+      <td>${escapeHtml(im.zona||'-')}</td>
+      <td class="num">${im.prezzo ? (isFinite(parseLooseNumber(im.prezzo)) && parseLooseNumber(im.prezzo)>0 ? fmtEuro(parseLooseNumber(im.prezzo)) : escapeHtml(im.prezzo)) : '&mdash;'}</td>
+      <td>${buyers.length ? buyers.map(b=>`<span class="badge incarico" style="margin:2px;">${escapeHtml(b.nome)}</span>`).join('') : '<span class="badge todo">nessun match</span>'}</td>
+      <td><button class="btn secondary btn-sm" data-del="${im.id}"><i class="ti ti-trash" aria-hidden="true"></i></button></td>
+    </tr>`;
+  }).join('');
+
+  body.querySelectorAll('button[data-del]').forEach(b=>{
+    b.addEventListener('click', e=>{
+      const id = e.target.closest('button').dataset.del;
+      const item = state.immobili.find(im=>im.id===id);
+      if(!confirm(`Eliminare definitivamente l'immobile "${item.titolo}"?\n\nQuesta azione non può essere annullata.`)) return;
+      state.immobili = state.immobili.filter(im=>im.id!==id);
+      scheduleSave();
+      renderImmobili();
+    });
+  });
+}
+
+document.getElementById('add-immobile-btn').addEventListener('click', ()=>{
+  const card = document.getElementById('new-immobile-card');
+  card.style.display = card.style.display==='none' ? 'block' : 'none';
+});
+document.getElementById('im-cancel').addEventListener('click', ()=>{
+  document.getElementById('new-immobile-card').style.display='none';
+});
+document.getElementById('im-save').addEventListener('click', ()=>{
+  const titolo = document.getElementById('im-titolo').value.trim();
+  if(!titolo) return;
+  const immobile = {
+    id: 'im'+Date.now(),
+    titolo,
+    tipo: document.getElementById('im-tipo').value,
+    zona: document.getElementById('im-zona').value.trim(),
+    prezzo: document.getElementById('im-prezzo').value.trim(),
+    link: document.getElementById('im-link').value.trim()
+  };
+  state.immobili.push(immobile);
+  ['im-titolo','im-zona','im-prezzo','im-link'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('new-immobile-card').style.display='none';
+  scheduleSave();
+  renderImmobili();
+
+  const buyers = findBuyersFor(immobile);
+  if(buyers.length){
+    alert(`Attenzione: "${titolo}" corrisponde alla ricerca di ${buyers.map(b=>b.nome).join(', ')}.\nRicordati di inviarglielo!`);
+  }
+});
+
+
+/* ============================================================
+   RENDER: TEAM
+   ============================================================ */
+let teamChartInstance = null;
+function renderTeam(){
+  const sorted = [...state.team].sort((a,b)=>b.produzione-a.produzione);
+  const body = document.getElementById('team-body');
+  body.innerHTML = sorted.map((t,idx)=>{
+    const pct = (t.produzione/t.obiettivo*100);
+    return `<tr class="${t.me?'me':''}">
+      <td class="rank">${idx+1}</td>
+      <td style="font-weight:600;">${t.nome}${t.me?' (tu)':''}</td>
+      <td class="num">${t.notizie}</td>
+      <td class="num">${t.attivi}</td>
+      <td class="num">${t.totali}</td>
+      <td class="num">${t.venduti}</td>
+      <td class="num">${fmtEuro(t.produzione)}</td>
+      <td class="num">${fmtEuro(t.obiettivo)}</td>
+      <td>
+        <div class="progress-track" style="width:80px;display:inline-block;vertical-align:middle;margin-right:6px;">
+          <div class="progress-fill ${pct<30?'low':pct<60?'mid':'high'}" style="width:${Math.min(pct,100)}%"></div>
+        </div>
+        ${fmtPct(pct)}
+      </td>
+    </tr>`;
+  }).join('');
+
+  const ctx = document.getElementById('teamChart');
+  if(teamChartInstance) teamChartInstance.destroy();
+  teamChartInstance = new Chart(ctx, {
+    type:'bar',
+    data:{
+      labels: sorted.map(t=>t.nome + (t.me?' (tu)':'')),
+      datasets:[
+        {label:'Produzione', data: sorted.map(t=>t.produzione), backgroundColor: sorted.map(t=>t.me?'#b8863c':'#c8c2ad'), borderRadius:3},
+        {label:'Obiettivo', data: sorted.map(t=>t.obiettivo), type:'line', borderColor:'#1f2a30', borderDash:[4,3], backgroundColor:'transparent', pointRadius:2, tension:0}
+      ]
+    },
+    options:{
+      indexAxis:'y',
+      responsive:true, maintainAspectRatio:false,
+      plugins:{legend:{display:false}},
+      scales:{ x:{ ticks:{ callback:(v)=>'€'+(v/1000)+'k' } } }
+    }
+  });
+}
+
+/* ============================================================
+   OBIETTIVO SAVE
+   ============================================================ */
+document.getElementById('obj-save').addEventListener('click', ()=>{
+  const val = parseFloat(document.getElementById('obj-input').value);
+  if(!val || val<=0) return;
+  state.obiettivo = val;
+  const me = state.team.find(t=>t.me);
+  me.obiettivo = val;
+  scheduleSave();
+  renderDashboard();
+  renderTeam();
+});
+
+/* ============================================================
+   UTILS
+   ============================================================ */
+function escapeHtml(str){
+  if(str===null||str===undefined) return '';
+  return String(str).replace(/[&<>"']/g, m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+}
+
+/* ============================================================
+   INIT
+   ============================================================ */
+async function init(){
+  document.getElementById('today-date').textContent = new Intl.DateTimeFormat('it-IT',{day:'numeric',month:'long',year:'numeric'}).format(new Date());
+  state = await loadState();
+  renderDashboard();
+  renderNotizie();
+  renderPipeline();
+  renderVenditori();
+  renderSegnalatori();
+  renderAcquirenti();
+  renderImmobili();
+  renderTeam();
+}
+
+document.getElementById('reset-data-btn').addEventListener('click', async ()=>{
+  if(!confirm('Questo sovrascrive tutti i dati attuali con i dati di partenza (notizie, incarichi, team, contatti, immobili).\n\nLe modifiche fatte finora andranno perse. Continuare?')) return;
+  state = JSON.parse(JSON.stringify(SEED));
+  await saveState();
+  renderDashboard();
+  renderNotizie();
+  renderPipeline();
+  renderVenditori();
+  renderSegnalatori();
+  renderAcquirenti();
+  renderImmobili();
+  renderTeam();
+  alert('Dati ripristinati.');
+});
+
+init();
+</script>
+</body>
+</html>
